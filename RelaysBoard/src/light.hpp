@@ -15,6 +15,8 @@
 #define HB_STATE 15 // Binary representation 1111
 #define DEBOUNCE_TIME 250
 
+extern bool legalMode;
+
 // Function declarations for light operations
 void init_pins();
 void stop();

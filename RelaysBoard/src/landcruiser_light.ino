@@ -8,6 +8,7 @@
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
+bool legalMode = false;
 
 void setup()
 {

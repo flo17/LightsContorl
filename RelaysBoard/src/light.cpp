@@ -33,8 +33,7 @@ unsigned long hbSignalTime = 0;
 unsigned long lastHbSignalTime = 0;
 bool hbSignal = false;
 bool hbState = false;
-// By default, the high beam relay is active to respect a legal requirement
-bool relayState = true;
+
 
 // Effects table
 Effect effects[EFFECT_COUNT] = {
@@ -99,14 +98,14 @@ void changeState(uint8_t newState, bool init)
                                               ((newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((newState & 0b0100) << PIN_LIGHT3 - 2) |
                                               ((newState & 0b1000) << PIN_LIGHT4 - 3)) |
-        (relayState << PIN_RELAY_HB);
+        (legalMode << PIN_RELAY_HB); // If true, open the relay to disable original high beam
 
     // Disable GPIOs
     GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, ((~newState & 0b0001) << PIN_LIGHT1) |
                                               ((~newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((~newState & 0b0100) << PIN_LIGHT3 - 2) |
                                               ((~newState & 0b1000) << PIN_LIGHT4 - 3)) |
-        (relayState << PIN_RELAY_HB);
+        (!legalMode << PIN_RELAY_HB); // If false, close the relay to enable original high beam
     // Publish the new state
     if (init)
     {

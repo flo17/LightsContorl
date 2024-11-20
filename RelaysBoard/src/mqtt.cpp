@@ -4,6 +4,7 @@
 #include <Ticker.h>
 #include <WebSerial.h>
 #include "light.hpp"
+#include <ArduinoJson.h>
 
 // Defining WiFi channel for optimized connection speed
 #define WIFI_CHANNEL 6
@@ -64,6 +65,7 @@ void SuscribeMqtt()
     mqttClient.subscribe(TOPIC_LIGHT_COMMAND, 0); // Subscribe to individual light control
     mqttClient.subscribe(TOPIC_LIGHT_EFFECT, 0);  // Subscribe to effect control
     mqttClient.subscribe(TOPIC_LIGHT_STOP, 1);    // Subscribe to stop command
+    mqttClient.subscribe(TOPIC_CONFIG, 0);        // Subscribe to configuration
     Serial.print("Subscribing at QoS 1");
 }
 
@@ -217,6 +219,29 @@ void OnMqttReceived(char *topic, char *payload, AsyncMqttClientMessageProperties
         }
 
         playEffect(effect, repetitions, delayMs, invert);
+    }
+    else if (strcmp(topic, TOPIC_CONFIG) == 0)
+    {
+        // Handle configuration
+                // Parse the JSON configuration
+        StaticJsonDocument<200> doc;
+        payload[len] = '\0'; // Null-terminate the string
+        DeserializationError error = deserializeJson(doc, payload);
+
+        if (error)
+        {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return;
+        }
+
+        // Check and update the legalMode configuration
+        if (doc.containsKey("LEGAL_MODE"))
+        {
+            legalMode = doc["LEGAL_MODE"];
+            Serial.print(F("LEGAL_MODE updated to: "));
+            Serial.println(legalMode ? "true" : "false");
+        }
     }
 }
 

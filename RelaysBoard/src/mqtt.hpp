@@ -11,8 +11,11 @@
 #define TOPIC_LIGHT_COMMAND "light/command"    // Topic for light command
 #define TOPIC_LIGHT_EFFECT "light/effect"      // Topic for light effect
 #define TOPIC_LIGHT_STOP "light/stop"          // Topic for stopping the effect
+#define TOPIC_CONFIG "config"                  // Topic for configuration
 #define STATE_OFF "0"                       // State representation for off
 #define STATE_ON "1"                        // State representation for on
+
+extern bool legalMode; // Legal mode to disable the original high beam
 
 // Function declarations for MQTT operations
 void ConnectWiFi_STA();
