@@ -61,9 +61,9 @@ void WiFiEvent(WiFiEvent_t event)
 
 void SuscribeMqtt()
 {
-    mqttClient.subscribe("light/command", 0); // Subscribe to individual light control
-    mqttClient.subscribe("light/effect", 0);  // Subscribe to effect control
-    mqttClient.subscribe("light/stop", 1);    // Subscribe to stop command
+    mqttClient.subscribe(TOPIC_LIGHT_COMMAND, 0); // Subscribe to individual light control
+    mqttClient.subscribe(TOPIC_LIGHT_EFFECT, 0);  // Subscribe to effect control
+    mqttClient.subscribe(TOPIC_LIGHT_STOP, 1);    // Subscribe to stop command
     Serial.print("Subscribing at QoS 1");
 }
 
