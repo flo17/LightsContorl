@@ -1,5 +1,6 @@
 #include "gui.hpp"
 #include "mqtt.hpp"
+#include <ArduinoJson.h>
 
 // Define styles for the light indicators
 lv_style_t style_indicator_off;
@@ -242,6 +243,38 @@ static void inv_handler(lv_event_t *e)
     }
 }
 
+static void lm_handler(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e);
+    lv_obj_t *tabview = (lv_obj_t *)lv_event_get_user_data(e);
+
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        bool legalMode = lv_obj_has_state(obj, LV_STATE_CHECKED) ? true : false;
+        lv_obj_t *btnmatrix = lv_tabview_get_tab_btns(tabview);
+        
+        if (legalMode)
+        {
+            // Disable first and second tab buttons
+            lv_btnmatrix_set_btn_ctrl(btnmatrix, 0, LV_BTNMATRIX_CTRL_HIDDEN);
+            lv_btnmatrix_set_btn_ctrl(btnmatrix, 1, LV_BTNMATRIX_CTRL_HIDDEN);
+        }
+        else
+        {
+            // Enable first and second tab buttons
+            lv_btnmatrix_clear_btn_ctrl(btnmatrix, 0, LV_BTNMATRIX_CTRL_HIDDEN);
+            lv_btnmatrix_clear_btn_ctrl(btnmatrix, 1, LV_BTNMATRIX_CTRL_HIDDEN);
+        }
+
+        StaticJsonDocument<200> doc;
+        doc["LEGAL_MODE"] = legalMode;
+        char buffer[256];
+        size_t n = serializeJson(doc, buffer);
+        mqttClient.publish(TOPIC_CONFIG, 0, false, buffer, n);
+    }
+}
+
 // Update the state and style of each light indicator
 void updateLightState(int index, bool state)
 {
@@ -381,7 +414,7 @@ void lv_create_main_gui(void *mqttClient)
 {
     mqttClient = (AsyncMqttClient *)mqttClient;
     /*Create a Tab view object*/
-    
+
     lv_obj_t *tabview = lv_tabview_create(lv_screen_active());
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_BOTTOM);
     lv_tabview_set_tab_bar_size(tabview, 30);
@@ -407,6 +440,7 @@ void lv_create_main_gui(void *mqttClient)
     lv_obj_remove_style_all(cont_tab1);
     lv_obj_set_flex_flow(cont_tab1, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_size(cont_tab1, lv_pct(100), lv_pct(100));
+
     create_light_indicators(cont_tab1);
     create_light_control(cont_tab1);
 
@@ -426,5 +460,16 @@ void lv_create_main_gui(void *mqttClient)
 
     create_command_buttons(cont_tab2);
 
-    create_status_label(tab3);
+    /*Create a container with ROW flex direction*/
+    lv_obj_t *cont_tab3 = lv_obj_create(tab3);
+    lv_obj_remove_style_all(cont_tab3);
+    lv_obj_set_flex_flow(cont_tab3, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_size(cont_tab3, lv_pct(100), lv_pct(100));
+
+    create_status_label(cont_tab3);
+
+    // Create checkbox for effect inversion
+    lv_obj_t *checkbox_legal = lv_checkbox_create(cont_tab3);
+    lv_checkbox_set_text(checkbox_legal, "LM");
+    lv_obj_add_event_cb(checkbox_legal, lm_handler, LV_EVENT_VALUE_CHANGED, (void *)tabview);
 }
