@@ -8,8 +8,12 @@
 #define PIN_LIGHT2 12
 #define PIN_LIGHT3 14
 #define PIN_LIGHT4 5
+#define PIN_RELAY_HB 2 // High beam relay, HIGH at boot
+#define PIN_HB_SIGNAL 4 // High beam signal 
 
-#define OFF_STATE 0
+#define OFF_STATE 0 // Binary representation 0000
+#define HB_STATE 15 // Binary representation 1111
+#define DEBOUNCE_TIME 250
 
 // Function declarations for light operations
 void init_pins();

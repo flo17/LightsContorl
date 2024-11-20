@@ -29,6 +29,13 @@ bool effectRunning = false;
 int delayMs = 0;
 int currentEffectName = -1;
 
+unsigned long hbSignalTime = 0;
+unsigned long lastHbSignalTime = 0;
+bool hbSignal = false;
+bool hbState = false;
+// By default, the high beam relay is active to respect a legal requirement
+bool relayState = true;
+
 // Effects table
 Effect effects[EFFECT_COUNT] = {
     {blinkingLR, sizeof(blinkingLR)},
@@ -41,8 +48,37 @@ Effect effects[EFFECT_COUNT] = {
     {cascadeRL, sizeof(cascadeRL)},
 };
 
+void ICACHE_RAM_ATTR isrhbSignalRising()
+{
+    hbSignalTime = millis();
+    if (hbSignalTime - lastHbSignalTime > DEBOUNCE_TIME)
+    {
+        // Stop effect to assure the high beam signal is not interrupted
+        stopEffect = true;
+
+        hbSignal = true;
+        lastHbSignalTime = hbSignalTime;
+    }
+}
+
+void ICACHE_RAM_ATTR isrhbSignalFalling()
+{
+    hbSignalTime = millis();
+    if (hbSignalTime - lastHbSignalTime > DEBOUNCE_TIME)
+    {
+        hbSignal = false;
+        lastHbSignalTime = hbSignalTime;
+    }
+}
+
 void init_pins()
 {
+    pinMode(PIN_HB_SIGNAL, INPUT_PULLUP);
+    pinMode(PIN_RELAY_HB, OUTPUT);
+
+    attachInterrupt(PIN_HB_SIGNAL, isrhbSignalRising, RISING);
+    attachInterrupt(PIN_HB_SIGNAL, isrhbSignalFalling, FALLING);
+
     for (int i = 0; i < 4; i++)
     {
         pinMode(relayPins[i], OUTPUT);
@@ -62,13 +98,15 @@ void changeState(uint8_t newState, bool init)
     GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, ((newState & 0b0001) << PIN_LIGHT1) |
                                               ((newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((newState & 0b0100) << PIN_LIGHT3 - 2) |
-                                              ((newState & 0b1000) << PIN_LIGHT4 - 3));
+                                              ((newState & 0b1000) << PIN_LIGHT4 - 3)) |
+        (relayState << PIN_RELAY_HB);
 
     // Disable GPIOs
     GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, ((~newState & 0b0001) << PIN_LIGHT1) |
                                               ((~newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((~newState & 0b0100) << PIN_LIGHT3 - 2) |
-                                              ((~newState & 0b1000) << PIN_LIGHT4 - 3));
+                                              ((~newState & 0b1000) << PIN_LIGHT4 - 3)) |
+        (relayState << PIN_RELAY_HB);
     // Publish the new state
     if (init)
     {
@@ -93,9 +131,41 @@ void playEffect(int effectName, int repetitions, int delayMsParam, bool invert)
 // Execute an effect function with repetition and delay, optionally inverted
 void updateEffect()
 {
+    // If the high beam signal is active, turn on the high beam to respect the signal
+    if (hbSignal && !hbState)
+    {
+        changeState(HB_STATE);
+        hbState = true;
+        return;
+    }
+
+    // If the high beam signal is inactive, turn off the high beam
+    // A short high beam flash will stop any running effect
+    if (!hbSignal && hbState)
+    {
+        // changeState will be called in the condition below with stopEffect = true
+        // changeState(OFF_STATE);
+        // hbState = false;
+
+        stopEffect = true;
+        return;
+    }
+
     if (stopEffect)
     {
-        changeState(OFF_STATE);
+        // If the high beam signal is active, turn on the high beam to respect the signal
+        // When a effect is stopped, previous state is restored
+        if (hbState)
+        {
+            changeState(HB_STATE);
+            hbState = true;
+        }
+        else
+        {
+            changeState(OFF_STATE);
+            hbState = false;
+        }
+
         effectRunning = false;
         stopEffect = false;
         return;
