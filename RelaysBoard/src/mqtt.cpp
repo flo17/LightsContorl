@@ -13,6 +13,7 @@ Ticker mqttReconnectTimer;
 Ticker wifiReconnectTimer;
 
 AsyncMqttClient mqttClient;
+bool legalMode = false;
 
 void ConnectWiFi_STA()
 {
@@ -44,7 +45,7 @@ void WiFiEvent(WiFiEvent_t event)
     String message = "Connected! IP: " + ipStr; // Create message with IP
     switch (event)
     {
-    case WIFI_EVENT_STAMODE_GOT_IP:
+    case SYSTEM_EVENT_STA_GOT_IP:
         Serial.println("WiFi connected");
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
@@ -52,7 +53,7 @@ void WiFiEvent(WiFiEvent_t event)
 
         ConnectToMqtt();
         break;
-    case WIFI_EVENT_SOFTAPMODE_STADISCONNECTED:
+    case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
         mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         wifiReconnectTimer.once(2, ConnectWiFi_STA);
@@ -238,9 +239,9 @@ void OnMqttReceived(char *topic, char *payload, AsyncMqttClientMessageProperties
         // Check and update the legalMode configuration
         if (doc.containsKey("LEGAL_MODE"))
         {
-            legalMode = doc["LEGAL_MODE"];
-            Serial.print(F("LEGAL_MODE updated to: "));
-            Serial.println(legalMode ? "true" : "false");
+            // Convert value LEGAL_MODE in bool
+            legalMode = (bool)doc["LEGAL_MODE"];
+            digitalWrite(PIN_RELAY_HB, legalMode);
         }
     }
 }

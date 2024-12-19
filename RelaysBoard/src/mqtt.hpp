@@ -2,7 +2,7 @@
 #define MQTT_HPP
 
 #include <AsyncMqttClient.h>
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 
 // MQTT connection constants
 #define MQTT_HOST IPAddress(192, 168, 2, 1) // IP address of the MQTT broker
@@ -14,8 +14,6 @@
 #define TOPIC_CONFIG "config"                  // Topic for configuration
 #define STATE_OFF "0"                       // State representation for off
 #define STATE_ON "1"                        // State representation for on
-
-extern bool legalMode; // Legal mode to disable the original high beam
 
 // Function declarations for MQTT operations
 void ConnectWiFi_STA();

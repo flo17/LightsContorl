@@ -47,25 +47,21 @@ Effect effects[EFFECT_COUNT] = {
     {cascadeRL, sizeof(cascadeRL)},
 };
 
-void ICACHE_RAM_ATTR isrhbSignalRising()
+void ICACHE_RAM_ATTR isrhbSignalChange()
 {
     hbSignalTime = millis();
     if (hbSignalTime - lastHbSignalTime > DEBOUNCE_TIME)
     {
-        // Stop effect to assure the high beam signal is not interrupted
-        stopEffect = true;
-
-        hbSignal = true;
-        lastHbSignalTime = hbSignalTime;
-    }
-}
-
-void ICACHE_RAM_ATTR isrhbSignalFalling()
-{
-    hbSignalTime = millis();
-    if (hbSignalTime - lastHbSignalTime > DEBOUNCE_TIME)
-    {
-        hbSignal = false;
+        if (digitalRead(PIN_HB_SIGNAL) == HIGH)
+        {
+            // Stop effect to assure the high beam signal is not interrupted
+            stopEffect = true;
+            hbSignal = false;
+        }
+        else
+        {
+            hbSignal = true;
+        }
         lastHbSignalTime = hbSignalTime;
     }
 }
@@ -75,8 +71,7 @@ void init_pins()
     pinMode(PIN_HB_SIGNAL, INPUT_PULLUP);
     pinMode(PIN_RELAY_HB, OUTPUT);
 
-    attachInterrupt(PIN_HB_SIGNAL, isrhbSignalRising, RISING);
-    attachInterrupt(PIN_HB_SIGNAL, isrhbSignalFalling, FALLING);
+    attachInterrupt(PIN_HB_SIGNAL, isrhbSignalChange, CHANGE);
 
     for (int i = 0; i < 4; i++)
     {
@@ -94,18 +89,16 @@ void changeState(uint8_t newState, bool init)
 {
 
     // Enable GPIOs
-    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, ((newState & 0b0001) << PIN_LIGHT1) |
+    GPIO_REG_WRITE(GPIO_OUT_W1TS_REG, ((newState & 0b0001) << PIN_LIGHT1) |
                                               ((newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((newState & 0b0100) << PIN_LIGHT3 - 2) |
-                                              ((newState & 0b1000) << PIN_LIGHT4 - 3)) |
-        (legalMode << PIN_RELAY_HB); // If true, open the relay to disable original high beam
+                                              ((newState & 0b1000) << PIN_LIGHT4 - 3));
 
     // Disable GPIOs
-    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, ((~newState & 0b0001) << PIN_LIGHT1) |
+    GPIO_REG_WRITE(GPIO_OUT_W1TC_REG, ((~newState & 0b0001) << PIN_LIGHT1) |
                                               ((~newState & 0b0010) << PIN_LIGHT2 - 1) |
                                               ((~newState & 0b0100) << PIN_LIGHT3 - 2) |
-                                              ((~newState & 0b1000) << PIN_LIGHT4 - 3)) |
-        (!legalMode << PIN_RELAY_HB); // If false, close the relay to enable original high beam
+                                              ((~newState & 0b1000) << PIN_LIGHT4 - 3));
     // Publish the new state
     if (init)
     {
@@ -143,18 +136,17 @@ void updateEffect()
     if (!hbSignal && hbState)
     {
         // changeState will be called in the condition below with stopEffect = true
-        // changeState(OFF_STATE);
-        // hbState = false;
-
+        //changeState(OFF_STATE);
+        //hbState = false;
         stopEffect = true;
-        return;
+        //return;
     }
 
     if (stopEffect)
     {
         // If the high beam signal is active, turn on the high beam to respect the signal
         // When a effect is stopped, previous state is restored
-        if (hbState)
+        if (hbSignal)
         {
             changeState(HB_STATE);
             hbState = true;

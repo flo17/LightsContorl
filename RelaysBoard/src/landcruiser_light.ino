@@ -1,14 +1,14 @@
-#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
 #include "credentials.h"
-#include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <WebSerial.h>
 #include "light.hpp"
 #include "mqtt.hpp"
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
-bool legalMode = false;
 
 void setup()
 {
